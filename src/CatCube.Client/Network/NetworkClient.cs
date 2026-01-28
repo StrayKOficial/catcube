@@ -18,6 +18,7 @@ public class NetworkClient : IDisposable
     public Action<int, PlayerState>? OnPlayerStateReceived;
     public Action<int>? OnPlayerLeft;
     public Action? OnDisconnected;
+    public int LocalId => _localId;
 
     public NetworkClient()
     {
@@ -76,14 +77,19 @@ public class NetworkClient : IDisposable
         _client.Start();
     }
 
-    public void Connect(string ip, int port, string username)
+    public void Connect(string ip, int port, string username, AvatarData avatar)
     {
         Console.WriteLine($"Connecting to {ip}:{port} as {username}...");
         
         NetDataWriter connectData = new NetDataWriter();
-        connectData.Put(username);
+        // The Key must be the first thing if using AcceptIfKey or similar, 
+        // but often it is better to just put it in the writer.
+        // Actually, LiteNetLib Connect has an overload with key.
         
-        _client.Connect(ip, port, connectData);
+        connectData.Put(username);
+        avatar.Serialize(connectData);
+        
+        _client.Connect(ip, port, NetworkConfig.Key, connectData);
     }
 
     public void SendState(PlayerState state)

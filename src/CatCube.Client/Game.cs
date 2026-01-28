@@ -159,7 +159,7 @@ public class Game : IDisposable
         _netClient = new NetworkClient();
         _netClient.OnPlayerStateReceived += OnRemotePlayerState;
         _netClient.OnPlayerLeft += OnPlayerLeft;
-        _netClient.Connect(_serverIp, _serverPort, _username);
+        _netClient.Connect(_serverIp, _serverPort, _username, _avatar);
         
         // --- v2.6 Background Music ---
         _musicPlayer.PlaybackFinished += (sender, args) => {
@@ -181,6 +181,9 @@ public class Game : IDisposable
     
     private void OnRemotePlayerState(int id, PlayerState state)
     {
+        // Don't sync our own ghost
+        if (id == _netClient?.LocalId) return;
+
         if (_remotePlayers.TryGetValue(id, out RemotePlayer? remote))
         {
             remote.UpdateState(new Vector3(state.X, state.Y, state.Z), state.Rotation, state.WalkCycle, state.State, state.Username, state.Avatar);
