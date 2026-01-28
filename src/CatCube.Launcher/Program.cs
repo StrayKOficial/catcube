@@ -485,7 +485,9 @@ class Program
                         
                         if (ImGui.Button("Play as Guest", new Vector2(260, 35)))
                         {
-                            AuthService.EnterGuestMode("Guest_" + new Random().Next(1000, 9999));
+                            string guestName = "Guest_" + new Random().Next(1000, 9999);
+                            AuthService.EnterGuestMode(guestName);
+                            ProfileService.InitializeGuestProfile(guestName);
                             _showLoginScreen = false;
                         }
                     }

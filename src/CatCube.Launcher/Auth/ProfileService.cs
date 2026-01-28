@@ -8,6 +8,21 @@ public class ProfileService
     public static Profile? CurrentProfile => _currentProfile;
     public static string StatusMessage { get; private set; } = "Ready";
 
+    public static void InitializeGuestProfile(string username)
+    {
+        _currentProfile = new Profile 
+        { 
+            Id = "guest-id",
+            Username = username,
+            ShirtColor = "#CC3333",
+            PantsColor = "#264073",
+            SkinColor = "#FFD9B8",
+            BodyType = 0,
+            HairStyle = 1
+        };
+        StatusMessage = "Guest Profile Active";
+    }
+
     public static async Task<Profile?> FetchProfileAsync()
     {
         StatusMessage = "Checking Auth...";

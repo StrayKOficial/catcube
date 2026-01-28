@@ -19,6 +19,7 @@ public class AuthService
     {
         get 
         {
+            if (_isGuest) return _guestUsername;
             if (_currentSession?.User?.UserMetadata != null && 
                 _currentSession.User.UserMetadata.TryGetValue("username", out var username))
             {
@@ -27,6 +28,7 @@ public class AuthService
             return _currentSession?.User?.Email?.Split('@')[0];
         }
     }
+    private static string? _guestUsername;
     public static string? UserId => _isGuest ? "guest-id" : _currentSession?.User?.Id;
     private static bool _isGuest = false;
     public static bool IsGuest => _isGuest;
@@ -34,6 +36,7 @@ public class AuthService
     public static void EnterGuestMode(string username)
     {
         _isGuest = true;
+        _guestUsername = username;
         _currentSession = null;
     }
 
