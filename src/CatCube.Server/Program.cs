@@ -52,21 +52,29 @@ class Program
 
         listener.PeerConnectedEvent += peer =>
         {
-            Console.WriteLine($"Player connected: {peer.EndPoint} to map: {mapName}");
             int playerId = peer.EndPoint.Port;
-            
-            // Retrieve username and avatar
-            string username = "Connecting...";
+            string username_final = "Connecting...";
             AvatarData avatar = new AvatarData { ShirtColor="#CC3333", PantsColor="#264073", SkinColor="#FFD9B8" };
             
             if (connectingUsers.TryGetValue(peer.EndPoint, out var data))
             {
-                username = data.Username;
+                username_final = data.Username;
                 avatar = data.Avatar;
                 connectingUsers.Remove(peer.EndPoint); // Clean up
             }
             
-            players[playerId] = new PlayerState { Id = playerId, Username = username, Avatar = avatar };
+            Console.WriteLine($"[Network] Player connected: {peer.EndPoint} (Username: {username_final})");
+            
+            PlayerState newState = new PlayerState { Id = playerId, Username = username_final, Avatar = avatar };
+            players[playerId] = newState;
+
+            // Broadcast new player to EVERYONE ELSE
+            writer.Reset();
+            writer.Put((byte)PacketType.PlayerState);
+            newState.Serialize(writer);
+            server.SendToAll(writer, DeliveryMethod.ReliableOrdered, peer);
+            
+            Console.WriteLine($"[Network] Total players online: {players.Count}");
             
             // Send current world state to new player
             writer.Reset();

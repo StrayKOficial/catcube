@@ -11,6 +11,7 @@ public class NetworkClient : IDisposable
     private NetManager _client;
     private NetPeer? _serverPeer;
     private NetDataWriter _writer;
+    private int _localId = -1;
     
     // Callbacks
     public Action<int>? OnConnected;
@@ -33,6 +34,7 @@ public class NetworkClient : IDisposable
             {
                 case PacketType.WorldState:
                     int count = reader.GetInt();
+                    Console.WriteLine($"[Network] Received WorldState: {count} players");
                     for(int i=0; i<count; i++)
                     {
                         PlayerState state = new PlayerState();
@@ -44,6 +46,8 @@ public class NetworkClient : IDisposable
                 case PacketType.PlayerState:
                     PlayerState pState = new PlayerState();
                     pState.Deserialize(reader);
+                    if (pState.Id != _localId)
+                        Console.WriteLine($"[Network] Received PlayerState for {pState.Id} ({pState.Username})");
                     OnPlayerStateReceived?.Invoke(pState.Id, pState);
                     break;
                     
@@ -58,7 +62,8 @@ public class NetworkClient : IDisposable
         {
             Console.WriteLine("Connected to server!");
             _serverPeer = peer;
-            OnConnected?.Invoke(peer.EndPoint.Port); // Use port as local ID
+            _localId = peer.EndPoint.Port;
+            OnConnected?.Invoke(_localId); // Use port as local ID
         };
         
         _listener.PeerDisconnectedEvent += (peer, info) =>

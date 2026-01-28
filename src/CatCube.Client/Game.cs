@@ -187,7 +187,7 @@ public class Game : IDisposable
         }
         else
         {
-            Console.WriteLine($"New remote player: {id} ({state.Username})");
+            Console.WriteLine($"[Game] Discovering new player: {id} ({state.Username}) at ({state.X}, {state.Y}, {state.Z})");
             var newRemote = new RemotePlayer(_gl, id, new Vector3(state.X, state.Y, state.Z));
             newRemote.UpdateState(new Vector3(state.X, state.Y, state.Z), state.Rotation, state.WalkCycle, state.State, state.Username, state.Avatar);
             _remotePlayers[id] = newRemote;
