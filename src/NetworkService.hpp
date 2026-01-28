@@ -51,6 +51,7 @@ public:
     std::function<void(uint32_t)> onPlayerJoined;
     std::function<void(uint32_t)> onPlayerLeft;
     std::function<void(uint32_t, Vector3, float)> onPositionReceived;
+    std::function<void(const std::string&)> onMapReceived;
 
 private:
     void handleEvents();

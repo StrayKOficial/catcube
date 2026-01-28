@@ -87,11 +87,26 @@ int main(int argc, char* argv[]) {
     // Set world early
     engine.setWorld(workspace);
 
-    // Load Map Script if provided
+    // Prepare Local Character Identity
+    std::string localPlayerName = "Guest_" + std::to_string(rand() % 9999);
+    if (isServer) localPlayerName = "Host";
+    else if (clientIp.empty()) localPlayerName = "Player";
+    else localPlayerName = "LocalPlayer";
+
+    engine.setLocalPlayerName(localPlayerName);
+
+    // Load Map Script if provided (SERVER/SOLO CASE)
     if (!mapPath.empty()) {
         std::cout << "Loading map script: " << mapPath << std::endl;
         engine.getScriptService().runFile(mapPath);
+        
+        // Spawn immediately since we are the host/local
+        engine.spawnCharacter(localPlayerName, {0, 10, 0});
+    } else if (clientIp.empty()) {
+        // Solo mode without map? Still spawn
+        engine.spawnCharacter(localPlayerName, {0, 10, 0});
     }
+    // CLIENTS: Wait for onMapReceived callback to call spawnCharacter
     
     // Networking Setup
     if (isServer) {
@@ -100,14 +115,7 @@ int main(int argc, char* argv[]) {
         engine.getNetworkService().startClient(clientIp, port);
     }
 
-    // Create Character
-    std::cout << "Spawning Character..." << std::endl;
-    auto character = CatCube::CharacterHelper::createCharacter("Player1", {0, 10, 0});
-    character->setParent(workspace);
-    
-    engine.setCharacter(character);
-
-    // Refresh world (to register character physics)
+    // Refresh world
     engine.setWorld(workspace);
     
     engine.run();

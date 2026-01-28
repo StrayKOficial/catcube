@@ -97,19 +97,40 @@ bool Engine::init(const std::string& title, int width, int height, bool headless
         }
     };
 
+    m_networkService.onMapReceived = [this](const std::string& name) {
+        std::cout << "Engine: Server is running map: " << name << ". Loading script..." << std::endl;
+        std::string scriptPath = "../maps/" + name + ".lua";
+        if (!m_scriptService.runFile(scriptPath)) {
+             m_scriptService.runFile(name); 
+        }
+        
+        // After map is loaded, spawn our local character if we haven't yet
+        if (!m_character && !m_localPlayerName.empty()) {
+            this->spawnCharacter(m_localPlayerName, {0, 10, 0});
+        }
+
+        // Force physics refresh
+        this->setWorld(m_world);
+    };
+
     m_networkService.onPositionReceived = [this](uint32_t id, Vector3 pos, float yaw) {
         (void)yaw;
-        if (m_remotePlayers.count(id)) {
-            auto root = std::dynamic_pointer_cast<BasePart>(m_remotePlayers[id]->getPrimaryPart());
-            if (root) {
-                // Instantly teleport for now or interpolate?
-                root->setPosition(pos);
-                // Also need to set the visual rotation
-                CharacterHelper::updateCharacterPhysics(m_remotePlayers[id], {0,0,0}, false, m_physics, 0.016f);
-            }
-        } else {
-            // Unexpected player? Join event might have been missed or delayed.
-            m_networkService.onPlayerJoined(id);
+        
+        // If we don't know this player yet, create them (this includes the host from client perspective)
+        if (m_remotePlayers.find(id) == m_remotePlayers.end()) {
+            std::cout << "Engine: Synchronizing remote player " << id << std::endl;
+            auto remoteChar = CharacterHelper::createCharacter("Remote_" + std::to_string(id), {0, 0, 0});
+            if (m_world) remoteChar->setParent(m_world);
+            m_remotePlayers[id] = remoteChar;
+            // Immediate registration
+            registerPhysicsRecursively(remoteChar);
+        }
+
+        auto root = std::dynamic_pointer_cast<BasePart>(m_remotePlayers[id]->getPrimaryPart());
+        if (root) {
+            root->setPosition(pos);
+            // Visual rotation and animation update
+            CharacterHelper::updateCharacterPhysics(m_remotePlayers[id], {0,0,0}, false, m_physics, 0.016f);
         }
     };
     
@@ -143,7 +164,15 @@ bool Engine::init(const std::string& title, int width, int height, bool headless
         m_mouseCaptured = false;
     }
 
-    return true;
+void Engine::spawnCharacter(const std::string& name, Vector3 pos) {
+    if (m_character) return; // Already spawned
+    
+    std::cout << "Engine: Spawning Local Character (" << name << ")..." << std::endl;
+    m_character = CharacterHelper::createCharacter(name, pos);
+    if (m_world) m_character->setParent(m_world);
+    
+    // Register to physics
+    registerPhysicsRecursively(m_character);
 }
 
 void Engine::setWorld(InstancePtr world) {
@@ -327,10 +356,14 @@ void Engine::update(float deltaTime) {
         // Apply physics movement
         CharacterHelper::updateCharacterPhysics(m_character, moveDir, jump, m_physics, deltaTime);
         
-        // Broadcast position
-        auto root = std::dynamic_pointer_cast<BasePart>(m_character->getPrimaryPart());
-        if (root) {
-            m_networkService.sendPosition(root->getPosition(), 0); // Yaw logic not fully isolated yet
+        // Broadcast position at 30Hz
+        m_networkTimer += deltaTime;
+        if (m_networkTimer >= 0.033f) {
+            m_networkTimer = 0;
+            auto root = std::dynamic_pointer_cast<BasePart>(m_character->getPrimaryPart());
+            if (root) {
+                m_networkService.sendPosition(root->getPosition(), 0);
+            }
         }
 
         // Update Humanoid state

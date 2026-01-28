@@ -30,6 +30,8 @@ public:
 
     void setWorld(InstancePtr world);
     void setCharacter(ModelPtr character) { m_character = character; }
+    void spawnCharacter(const std::string& name, Vector3 pos);
+    void setLocalPlayerName(const std::string& name) { m_localPlayerName = name; }
 
     // Services
     ScriptService& getScriptService() { return m_scriptService; }
@@ -63,6 +65,7 @@ private:
     uint64_t m_lastTime;
     float m_deltaTime;
     float m_fps;
+    float m_networkTimer = 0.0f;
     
     // Input
     bool m_keys[512] = {false};
@@ -73,6 +76,7 @@ private:
     
     // Player
     ModelPtr m_character; // Local player character
+    std::string m_localPlayerName;
     
     // Scripting
     ScriptService m_scriptService;
